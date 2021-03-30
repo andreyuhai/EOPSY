@@ -1,0 +1,180 @@
+#!/bin/bash
+
+# Author: Burak Kaymakci
+
+#
+# Color key
+#
+
+red=$'\e[0;91m'
+blue=$'\e[0;94m'
+green=$'\e[0;92m'
+bold=$'\e[1m'
+reset=$'\e[0m'
+
+banner() {
+    echo
+    printf "%s _  _  __   __  _ ____ _   _ %s \n" "$red $bold" "$reset"
+    printf "%s |\/| |  | |  \ | |___  \_/  %s \n" "$green $bold" "$reset"
+    printf "%s |  | |__| |__/ | |      |   %s \n" "$blue $bold" "$reset"
+    echo
+}
+
+usage() {
+
+    banner
+
+    echo "Usage: modify [options] {path_to_dir|path_to_file}"
+    echo
+    echo "Converts the filename given or all the filenames under the specified directory into specified case."
+    echo
+    echo "    -r            recursively convert all the filenames under given directory"
+    echo "    -l            convert filename(s) to lowercase"
+    echo "    -u            convert filename(s) to uppercase"
+    echo "    -h            show help message"
+    echo
+
+    return 0
+}
+
+# Rename a file or files in a directory
+rename() {
+    # Check whether the path points to a file or a directory
+    if [ -f "$target_path" ]; then
+        # If the path points to a file then call rename_file function with the target_path
+        rename_file "$target_path"
+    elif [ -d "$target_path" ]; then
+        # If the path points to a directory then depending on the recursive flag,
+        # find all the files in given directory path and call rename function
+        # on each file in given directory
+        find "$target_path" $([ "$recursive" = false ] && echo -maxdepth 1) -type f -print0 | while read -r -d $'\0' file; do
+            rename_file "$file"
+        done
+    else
+        printf "%sIncorrect path ✗%s\n" "$red" "$reset"
+        exit 1
+    fi
+}
+
+rename_file() {
+    local oldpath
+
+    local basename
+    local dirpath
+    local filename
+    local extension
+
+    local new_filename
+    local newpath
+
+    oldpath="$1"
+
+    basename=$(basename "$oldpath")
+    dirpath=${oldpath%$basename}
+    filename=${basename%.*}
+    extension=${basename##*.}
+
+    # Depending on the case flag change only the file name into
+    # desired case, either lower, upper or sed pattern
+    [ "$case" = "lower" ]   && new_filename=${filename,,}
+    [ "$case" = "upper" ]   && new_filename=${filename^^}
+    [ "$case" = "pattern" ] && new_filename=$(echo "$filename" | sed "$pattern")
+
+    # Create the new path with the new_filename
+    newpath="$dirpath$new_filename.$extension"
+
+    # If the newpath and oldpath are not the same,
+    # meaning that the file name has been changed, call move_file function
+    # with oldpath and newpath
+    [ ! "$newpath" = "$oldpath" ] && move_file "$oldpath" "$newpath"
+}
+
+move_file() {
+    oldpath=$1
+    newpath=$2
+
+    # If the new path already exists
+    # ask user whether to override existing file
+    # otherwise just move the file from oldpath to newpath
+    if [ -f "$newpath" ]; then
+        ask_override
+        if [ "$override" = "false" ]; then
+            echo "Skipping..."
+        else
+            echo "Overriding..."
+            mv "$oldpath" "$newpath"
+        fi
+    else
+        mv "$oldpath" "$newpath"
+    fi
+}
+
+ask_override() {
+    echo
+    printf "A file with path %s$newpath%s already exists!\n" "$red$bold" "$reset"
+    echo
+    echo "What do you want to do?"
+
+    select selection in override skip; do
+        case $selection in
+        override)
+            override=true
+            break
+            ;;
+        skip)
+            override=false
+            break
+            ;;
+        esac
+    done < /dev/tty
+}
+
+case=pattern
+recursive=false
+
+# Parse options
+
+while getopts ":rlu" option; do
+    case $option in
+    \?|:)
+        usage
+        exit 1
+        ;;
+    r) recursive=true
+        ;;
+    l) case=lower
+        ;;
+    u) case=upper
+        ;;
+    esac
+done
+
+# Shift given parameters
+shift "$((OPTIND - 1))"
+
+# Set the target path and pattern depending on case
+if [ "$case" = "pattern" ]; then
+    if [ "$1" ] && [ "$2" ]; then
+        pattern="$1"
+        target_path="$2"
+    else
+        usage
+        exit 1
+    fi
+else
+    if [ "$1" ]; then
+        target_path="$1"
+    else
+        usage
+        exit 1
+    fi
+fi
+
+banner
+rename
+
+echo
+printf "%sAll files have been modified \xE2\x9C\x94%s\n" "$green$bold" "$reset"
+echo
+
+exit 0

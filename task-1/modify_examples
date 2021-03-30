@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# Author: Burak Kaymakci
+
+echo
+
+#
+# Color key
+#
+
+red=$'\e[0;91m'
+blue=$'\e[0;94m'
+green=$'\e[0;92m'
+white=$'\e[0;97m'
+bold=$'\e[1m'
+uline=$'\e[4m'
+reset=$'\e[0m'
+
+extensions=("pdf" "py" "rb" "txt" "png" "c")
+directory_names=("foo" "foo/bar" "foo/baz" "foo/quax" "foo/bar/quux" "foo/bar/zxc")
+
+# Return a random extension from extensions array
+random_extension() {
+    echo "${extensions[RANDOM % ${#extensions[@]}]}"
+}
+
+# Prompt user to press ENTER to continue
+prompt_press_enter() {
+    read -s -p "Press ENTER to continue . . ."
+    clear
+}
+
+
+# Create random files with random extensions in directories from directory_names
+for testdir in "${directory_names[@]}"; do
+    echo "create directory '$testdir'"
+    [ ! -e "$testdir" ] && mkdir -p "$testdir"
+    num_files=$((RANDOM % 7 + 1))
+
+    for ((i=0; i < "$num_files"; i++)) do
+        counter=$(printf %02d $i)
+        testfile="$testdir/XXXXX.$(random_extension)"
+        echo "create file '$(mktemp $testfile)'"
+    done
+done
+
+clear
+tree
+echo
+printf "%sDirectory structure and test files have been created \xE2\x9C\x94%s\n" "$green" "$reset"
+echo
+
+prompt_press_enter
+
+# Run modify script with given arguments to test
+run_modify() {
+    local path
+    path="${@: -1}"
+
+    if [ "$#" -ge 2 ]; then
+        [ -e "$path" ] && old=$(tree -C "$path")
+    fi
+
+    set -x
+    ./modify "$@"
+    set +x
+
+    if [ "$#" -ge 2 ]; then
+        if [ -e "$path" ]; then
+            printf "%sOld%s\n" "$red" "$reset"
+            echo "$old"
+            echo
+            printf "%sNew%s\n" "$green" "$reset"
+            tree "$path"
+        fi
+    fi
+
+    prompt_press_enter
+}
+
+run_modify -h
+
+run_modify -l foo/bar/quux
+
+run_modify -u foo/bar/quux
+
+run_modify -ru foo/bar
+
+run_modify -rl foo/bar
+
+run_modify -r s/a/G/g foo/bar
+
+run_modify -rl non/existing/path
+
+run_modify -rmu wrong/option
+
+exit 0
+
