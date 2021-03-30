@@ -1,8 +1,10 @@
 # Task 1
 
+```
 _  _  __   __  _ ____ _   _
 |\/| |  | |  \ | |___  \_/
 |  | |__| |__/ | |      |
+```
 
 Write a script modify with the following syntax:
 
