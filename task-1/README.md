@@ -31,6 +31,6 @@ folders in the current directory and will call `modify` script with different op
 
 Basically do,
 ```bash
-$./modify_examples
+$ ./modify_examples
 ```
 
