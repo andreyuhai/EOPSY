@@ -1,3 +1,9 @@
 READ 114688 ... okay
 READ 131072 ... page fault
 READ 245760 ... page fault
+READ 49151 ... okay
+READ 1542 ... page fault
+READ 16384 ... page fault
+READ 4 ... okay
+READ 20 ... okay
+READ 19 ... okay
