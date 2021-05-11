@@ -1,4 +1,6 @@
-  PROCESSES AND SIGNALS
+# Task 2
+
+PROCESSES AND SIGNALS
 
 
 [] 1. Write a program in C with the name tsig, which tests synchronization
